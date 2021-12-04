@@ -214,7 +214,7 @@ The heart dataset that was worked on throughout this project was passed onto Pyt
 
 ### Concluding Remarks
 
-Cluster analysis showed that those with higher age, resting BP, and old peak as well as lower cholesterol and maximum heart rate tend to have a higher chance for heart disease. Linear classifying models differentiate those with and without heart disease accurately about 85% of the time. Meanwhile, a non-parametric classifier accurately differentiates those with and without heart disease about 85% of the time. Both AUCs are pretty good. Finally, the regression predictions have a mean squared error of 0.12.
+Cluster analysis showed that those with higher age, resting BP, and old peak as well as lower cholesterol and maximum heart rate tend to have a higher chance for heart disease. Principle component analysis showed that 88% of the variance is accounted for by 4 principle components. Linear classifying models differentiate those with and without heart disease accurately about 85% of the time. Meanwhile, a non-parametric classifier accurately differentiates those with and without heart disease about 85% of the time. Both AUCs are pretty good. Finally, the regression predictions have a mean squared error of 0.12.
 
 Cardiovascular disease is the leading cause of death around the world. Using various factors to predict whether an individual has heart disease is imperative to decrease fatalities.
 

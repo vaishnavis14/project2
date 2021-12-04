@@ -60,7 +60,7 @@ head(heart_data)
 
 ### Cluster Analysis
 
-```{R}
+```{R fig.height = 10}
 library(cluster)
 sil_width<-vector()
 for(i in 2:10){  
@@ -73,10 +73,9 @@ heart_pam$silinfo$avg.width
 
 library(GGally)
 heart_data %>% mutate(cluster=as.factor(heart_pam$clustering)) %>% ggpairs(cols = 1:12, aes(color = cluster))
-#How do you make this graph more readable?
 ```
 
-The graph shows that the highest silhouette width is present when k = 2. The pam function shows that the average silhouette is 0.7 for 2 clusters. This means that a reasonable structure has been found.
+The graph shows that the highest silhouette width is present when k = 2. The pam function shows that the average silhouette is 0.7 for 2 clusters. This means that a reasonable structure has been found. The graphs show that those with higher age, resting BP, and old peak as well as lower cholesterol and maximum heart rate tend to have a higher chance for heart disease.
     
     
 ### Dimensionality Reduction with PCA
@@ -85,9 +84,12 @@ The graph shows that the highest silhouette width is present when k = 2. The pam
 heart_numeric_data <- heart_data %>% select(Age, RestingBP, Cholesterol, MaxHR, Oldpeak)
 pca1 <- princomp(heart_numeric_data, cor = T)
 summary(pca1, loadings = T)
+
+library(factoextra)
+fviz_pca_biplot(pca1)
 ```
 
-Discussions of PCA here. 
+88% of the variance is accounted for by the first 4 principle components. To simplify the graph, only the first 2 principle components were plotted. Principle component 1 shows that those with a higher age tend to have a higher resting blood pressure, lower cholesterol, lower maximum heart rate, and higher old peaks. Principle component 2 shows that those with a higher cholesterol tend to have a higher resting blood pressure, higher maximum heart rate, and higher old peak.  
 
 ###  Linear Classifier
 
@@ -124,7 +126,7 @@ diags <- rbind(diags, class_diag(probs, truth, positive = 1)) }
 summarize_all(diags, mean)
 ```
 
-Discussion here
+The AUC for the linear model for the whole dataset is 0.83. There is a slight increase to 0.85 when cross validating the data. This is a good AUC because it is between 0.8 and 0.9. The purpose of looking at AUC is to determine how well the factors can distinguish between individuals with cardiovascular disease and those without cardiovascular disease.
 
 ### Non-Parametric Classifier
 
@@ -151,7 +153,7 @@ test <- data[folds == i,]
 truth <- test$HeartDisease
 
 # train model
-fit <- knn3(HeartDisease ~ Age + RestingBP + Cholesterol + MaxHR + Oldpeak, data=test)
+fit <- knn3(HeartDisease ~ Age + RestingBP + Cholesterol + MaxHR + Oldpeak, data = test)
 
 # test model
 probs <- predict(fit, test)[,2]
@@ -163,37 +165,58 @@ diags <- rbind(diags, class_diag(probs, truth, positive = 1)) }
 summarize_all(diags, mean)
 ```
 
-Discussion
+The AUC of the whole dataset using k nearest means is 0.87. However, the AUC when cross validating the data is 0.85, which is slightly lower. Thus, there are signs of overfitting. This is a good AUC because it is between 0.8 and 0.9. The AUC is approximately the same when comparing the non-parametric and parametric classifiers.
 
 
 ### Regression/Numeric Prediction
 
 ```{R}
-# regression model code here
+fit<-lm(HeartDisease~.,data = heart_data)
+yhat<-predict(fit)
+mean((heart_data$HeartDisease-yhat)^2)
 ```
 
 ```{R}
-# cross-validation of regression model here
+k = 11 #choose number of folds
+data <- heart_data[sample(nrow(heart_data)),] #randomly order rows
+folds <- cut(seq(1:nrow(heart_data)),breaks = k,labels = F) #create folds
+diags <- NULL
+for(i in 1:k){
+  train <- data[folds!= i,]
+  test <- data[folds == i,]
+  ## Fit linear regression model to training set
+  fit <- lm(HeartDisease~.,data = train)
+  ## Get predictions/y-hats on test set (fold i)
+  yhat <- predict(fit, newdata = test)
+  ## Compute prediction error  (MSE) for fold i
+  diags <- mean((test$HeartDisease-yhat)^2) 
+}
+mean(diags)
 ```
 
-Discussion
+There seems to be a little bit of overfitting since the cross validation set has an average mean squared error of  0.12, which is slightly higher than the regression model for the whole dataset, 0.10.
 
 ### Python 
 
 ```{R}
 library(reticulate)
+library(dplyr)
+use_python("/usr/bin/python3")
+female_heart_data <- heart_data %>% filter(Sex == 'F')
 ```
 
 ```{python}
-# python code here
+r.female_heart_data.agg('mean')
+r.heart_data.groupby('ChestPainType').agg('mean')
 ```
 
-Discussion
+The heart dataset that was worked on throughout this project was passed onto Python. The mean for each variable is computed based on chestpain type. The data shows that those with ASY chestpain have a signficantly higher chance of having cardiovascular disease. A new object was created with R code that only had data on females. This was passed onto Python and the mean for each variable was caluculated. Interestingly, the data shows that the probability of a female having heart disease is only 25%.
 
 ### Concluding Remarks
 
-Include concluding remarks here, if any
+Cluster analysis showed that those with higher age, resting BP, and old peak as well as lower cholesterol and maximum heart rate tend to have a higher chance for heart disease. Linear classifying models differentiate those with and without heart disease accurately about 85% of the time. Meanwhile, a non-parametric classifier accurately differentiates those with and without heart disease about 85% of the time. Both AUCs are pretty good. Finally, the regression predictions have a mean squared error of 0.12.
 
+Cardiovascular disease is the leading cause of death around the world. Using various factors to predict whether an individual has heart disease is imperative to decrease fatalities.
 
 
 

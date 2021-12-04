@@ -46,35 +46,45 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 
 # Mining, Classification, Prediction
 
-## Name and EID here
+## Vaishnavi Sathiyamoorthy vs25229
 
 ### Introduction 
 
-Paragraph or two introducing your datasets and variables, why they are interesting to you, etc. See instructions for more information
+Cardiovascular diseases cause the most number of deaths around the world. In fact, it is responsible for approximately 31% of deaths. This dataset includes 11 factors that could help predict the the possibility of an individual having cardiovascular disease. These factors are age, sex, type of chest pain, resting blood pressure, cholesterol, fasting blood sugar, resting electrocardiogram results, maximum heartrate, whether exercise induces angina, the old peak, and the type of slope of the peak during exercise. This dataset contains 918 observations and was found on Kaggle. 410 of the observations have heart disease and 508 of the observations do not have heart disease. The goal of this project is to predict whether an individual has heart disease based on these factors. 
 
 ```{R}
 library(tidyverse)
-# read your datasets in here, e.g., with read_csv()
-
-# if your dataset needs tidying, do so here
-
-# any other code here
+heart_data <- read_csv("heart.csv")
+head(heart_data) 
 ```
 
 ### Cluster Analysis
 
 ```{R}
 library(cluster)
-# clustering code here
+sil_width<-vector()
+for(i in 2:10){  
+  pam_fit <- pam(heart_data, k = i)  
+  sil_width[i] <- pam_fit$silinfo$avg.width  
+}
+ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
+heart_pam <- heart_data %>% pam(k = 2)
+heart_pam$silinfo$avg.width
+
+library(GGally)
+heart_data %>% mutate(cluster=as.factor(heart_pam$clustering)) %>% ggpairs(cols = 1:12, aes(color = cluster))
+#How do you make this graph more readable?
 ```
 
-Discussion of clustering here
+The graph shows that the highest silhouette width is present when k = 2. The pam function shows that the average silhouette is 0.7 for 2 clusters. This means that a reasonable structure has been found.
     
     
 ### Dimensionality Reduction with PCA
 
 ```{R}
-# PCA code here
+heart_numeric_data <- heart_data %>% select(Age, RestingBP, Cholesterol, MaxHR, Oldpeak)
+pca1 <- princomp(heart_numeric_data, cor = T)
+summary(pca1, loadings = T)
 ```
 
 Discussions of PCA here. 
@@ -82,11 +92,36 @@ Discussions of PCA here.
 ###  Linear Classifier
 
 ```{R}
-# linear classifier code here
+logistic_fit <- glm((HeartDisease == 1) ~ Age + RestingBP + Cholesterol + MaxHR + Oldpeak, data = heart_data, family="binomial")
+
+prob_reg <- predict(logistic_fit, new_data = heart_data, type = "response")
+class_diag(prob_reg, heart_data$HeartDisease, positive = 1)
 ```
 
 ```{R}
-# cross-validation of linear classifier here
+k <- 11
+data <- sample_frac(heart_data) #randomly order rows
+folds <- rep(1:k, length.out = nrow(data)) #create folds
+
+diags <- NULL
+
+i = 1
+for(i in 1:k){
+# create training and test sets
+train <- data[folds!= i,] 
+test <- data[folds == i,] 
+truth <- test$HeartDisease
+
+# train model
+fit <- glm(HeartDisease ~ Age + RestingBP + Cholesterol + MaxHR + Oldpeak, data = test, family = "binomial")
+
+# test model
+probs <- predict(fit, test, type = "response")
+
+# get performance metrics for each fold
+diags <- rbind(diags, class_diag(probs, truth, positive = 1)) }
+#average performance metrics across all folds
+summarize_all(diags, mean)
 ```
 
 Discussion here
@@ -95,11 +130,37 @@ Discussion here
 
 ```{R}
 library(caret)
-# non-parametric classifier code here
+knn_fit <- knn3(HeartDisease ~  Age + RestingBP + Cholesterol + MaxHR + Oldpeak, data = heart_data)
+prob_knn <- predict(knn_fit, heart_data)[,2]
+class_diag(prob_knn, heart_data$HeartDisease, positive = 1)
 ```
 
 ```{R}
-# cross-validation of np classifier here
+k = 11
+
+data <- sample_frac(heart_data) #randomly order rows
+folds <- rep(1:k, length.out = nrow(data)) #create folds
+
+diags <- NULL
+
+i = 1
+for(i in 1:k){
+# create training and test sets
+train <- data[folds != i,] 
+test <- data[folds == i,] 
+truth <- test$HeartDisease
+
+# train model
+fit <- knn3(HeartDisease ~ Age + RestingBP + Cholesterol + MaxHR + Oldpeak, data=test)
+
+# test model
+probs <- predict(fit, test)[,2]
+
+# get performance metrics for each fold
+diags <- rbind(diags, class_diag(probs, truth, positive = 1)) }
+
+#average performance metrics across all folds
+summarize_all(diags, mean)
 ```
 
 Discussion
